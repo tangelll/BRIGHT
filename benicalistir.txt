@@ -1,0 +1,16 @@
+#hatali veri seti var ama asagidaki shell komutu calisiyor
+python bda_benchmark/script/standard_ML/train_UNet.py --dataset 'BRIGHT' \
+                                        --train_batch_size 4 \
+                                        --eval_batch_size 2 \
+                                        --num_workers 2 \
+                                        --crop_size 640 \
+                                        --max_iters 800 \
+                                        --learning_rate 1e-4 \
+                                        --model_type 'UNet' \
+                                        --model_param_path 'bda_benchmark/salih' \
+                                        --train_dataset_path 'bda_benchmark/dataset/train' \
+                                        --train_data_list_path 'bda_benchmark/dataset/splitname/standard_ML/train_set.txt' \
+                                        --val_dataset_path 'bda_benchmark/dataset/val' \
+                                        --val_data_list_path 'bda_benchmark/dataset/splitname/standard_ML/val_set.txt' \
+                                        --test_dataset_path 'bda_benchmark/dataset/test' \
+                                        --test_data_list_path 'bda_benchmark/dataset/splitname/standard_ML/test_set.txt'

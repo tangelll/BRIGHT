@@ -1,5 +1,19 @@
 import sys
-sys.path.append('/home/chenhrx/project/BRIGHT/essd') # change this to the path of your project
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Bu klasörden 2 kat yukarı çıkınca 'bda_benchmark' klasörüne ulaşıyoruz:
+project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+
+# 3. Python'ın arama listesine bda_benchmark'ı ekle:
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+print("\n" + "="*60)
+print(f"🚀 KODUN ÇALIŞTIĞI ANA MERKEZ: {project_root}")
+print(f"📂 BU MERKEZDEKİ KLASÖRLER: {os.listdir(project_root)}")
+print("="*60 + "\n")
+
 
 import argparse
 import os
@@ -20,7 +34,6 @@ from datetime import datetime
 
 from util_func.metrics import Evaluator
 import util_func.lovasz_loss as L
-
 
 class Trainer(object):
     """
@@ -48,7 +61,7 @@ class Trainer(object):
         self.deep_model = UNet(in_channels=6, num_classes=4) 
         # self.deep_model = SiamCRNN()
 
-        self.deep_model = self.deep_model.cuda()
+        self.deep_model = self.deep_model.to('mps')
 
         # Create a directory to save model weights, organized by timestamp.
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -80,7 +93,7 @@ class Trainer(object):
         """
         best_mIoU = 0.0
         best_round = []
-        torch.cuda.empty_cache()
+        torch.mps.empty_cache()
         train_dataset = MultimodalDamageAssessmentDatset(self.args.train_dataset_path, self.args.train_data_name_list, crop_size=self.args.crop_size, max_iters=self.args.max_iters, type='train')
         train_data_loader = DataLoader(train_dataset, batch_size=self.args.train_batch_size, shuffle=True, num_workers=self.args.num_workers, drop_last=False)
         elem_num = len(train_data_loader)
@@ -89,10 +102,10 @@ class Trainer(object):
             itera, data = train_enumerator.__next__()
             pre_change_imgs, post_change_imgs, labels_loc, labels_clf, _ = data
 
-            pre_change_imgs = pre_change_imgs.cuda()
-            post_change_imgs = post_change_imgs.cuda()
-            labels_loc = labels_loc.cuda().long()
-            labels_clf = labels_clf.cuda().long()
+            pre_change_imgs = pre_change_imgs.to('mps')
+            post_change_imgs = post_change_imgs.to('mps')
+            labels_loc = labels_loc.to('mps').long()
+            labels_clf = labels_clf.to('mps').long()
 
             valid_labels_clf = (labels_clf != 255).any()
             if not valid_labels_clf:
@@ -154,25 +167,25 @@ class Trainer(object):
         self.evaluator_clf.reset()
         val_dataset = MultimodalDamageAssessmentDatset(self.args.val_dataset_path, self.args.val_data_name_list, 1024, None, 'test')
         val_data_loader = DataLoader(val_dataset, batch_size=self.args.eval_batch_size, num_workers=1, drop_last=False)
-        torch.cuda.empty_cache()
+        torch.mps.empty_cache()
 
         with torch.no_grad():
             for _, data in enumerate(val_data_loader):
                 pre_change_imgs, post_change_imgs, labels_loc, labels_clf, _ = data
 
-                pre_change_imgs = pre_change_imgs.cuda()
-                post_change_imgs = post_change_imgs.cuda()
-                labels_loc = labels_loc.cuda().long()
-                labels_clf = labels_clf.cuda().long()
+                pre_change_imgs = pre_change_imgs.to('mps')
+                post_change_imgs = post_change_imgs.to('mps')
+                labels_loc = labels_loc.to('mps').long()
+                labels_clf = labels_clf.to('mps').long()
 
                 input_data = torch.cat([pre_change_imgs, post_change_imgs], dim=1) # if you use UNet
                 output_clf = self.deep_model(input_data)  # if you use UNet
                 # _, output_clf = self.deep_model(pre_change_imgs, post_change_imgs) # If you use SiamCRNN
 
-                labels_loc = labels_loc.cpu().numpy()
-                output_clf = output_clf.data.cpu().numpy()
+                labels_loc = labels_loc.to('cpu').numpy()
+                output_clf = output_clf.data.to('cpu').numpy()
                 output_clf = np.argmax(output_clf, axis=1)
-                labels_clf = labels_clf.cpu().numpy()
+                labels_clf = labels_clf.to('cpu').numpy()
                 output_loc = output_clf.copy()
                 output_loc[output_loc > 0] = 1
                 self.evaluator_loc.add_batch(labels_loc, output_loc)
@@ -198,25 +211,25 @@ class Trainer(object):
         self.evaluator_clf.reset()
         test_dataset = MultimodalDamageAssessmentDatset(self.args.test_dataset_path, self.args.test_data_name_list, 1024, None, 'test')
         test_data_loader = DataLoader(test_dataset, batch_size=self.args.eval_batch_size, num_workers=1, drop_last=False)
-        torch.cuda.empty_cache()
+        torch.mps.empty_cache()
 
         with torch.no_grad():
             for _, data in enumerate(test_data_loader):
                 pre_change_imgs, post_change_imgs, labels_loc, labels_clf, _ = data
 
-                pre_change_imgs = pre_change_imgs.cuda()
-                post_change_imgs = post_change_imgs.cuda()
-                labels_loc = labels_loc.cuda().long()
-                labels_clf = labels_clf.cuda().long()
+                pre_change_imgs = pre_change_imgs.to('mps')
+                post_change_imgs = post_change_imgs.to('mps')
+                labels_loc = labels_loc.to('mps').long()
+                labels_clf = labels_clf.to('mps').long()
 
                 input_data = torch.cat([pre_change_imgs, post_change_imgs], dim=1) # if you use UNet
                 output_clf = self.deep_model(input_data)  # if you use UNet
                 # _, output_clf = self.deep_model(pre_change_imgs, post_change_imgs) # If you use SiamCRNN
 
-                labels_loc = labels_loc.cpu().numpy()
-                output_clf = output_clf.data.cpu().numpy()
+                labels_loc = labels_loc.to('cpu').numpy()
+                output_clf = output_clf.data.to('cpu').numpy()
                 output_clf = np.argmax(output_clf, axis=1)
-                labels_clf = labels_clf.cpu().numpy()
+                labels_clf = labels_clf.to('cpu').numpy()
                 output_loc = output_clf.copy()
                 output_loc[output_loc > 0] = 1
                 self.evaluator_loc.add_batch(labels_loc, output_loc)
@@ -236,6 +249,7 @@ class Trainer(object):
     
 
 def main():
+
     parser = argparse.ArgumentParser(description="Training on BRIGHT dataset")
 
 
@@ -256,7 +270,7 @@ def main():
     parser.add_argument('--test_data_name_list', type=list)
 
     parser.add_argument('--start_iter', type=int, default=0)
-    parser.add_argument('--cuda', type=bool, default=True)
+    parser.add_argument('--mps', type=bool, default=True)
     parser.add_argument('--max_iters', type=int, default=240000)
     parser.add_argument('--model_type', type=str)
     parser.add_argument('--model_param_path', type=str, default='/home/songjian/project/BRIGHT/dfc25_benchmark/saved_weights')
