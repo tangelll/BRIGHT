@@ -61,7 +61,7 @@ class Trainer(object):
         self.deep_model = UNet(in_channels=6, num_classes=4) 
         # self.deep_model = SiamCRNN()
 
-        self.deep_model = self.deep_model.to('mps')
+        self.deep_model = self.deep_model.to('cuda')
 
         # Create a directory to save model weights, organized by timestamp.
         now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -93,7 +93,7 @@ class Trainer(object):
         """
         best_mIoU = 0.0
         best_round = []
-        torch.mps.empty_cache()
+        torch.cuda.empty_cache()
         train_dataset = MultimodalDamageAssessmentDatset(self.args.train_dataset_path, self.args.train_data_name_list, crop_size=self.args.crop_size, max_iters=self.args.max_iters, type='train')
         train_data_loader = DataLoader(train_dataset, batch_size=self.args.train_batch_size, shuffle=True, num_workers=self.args.num_workers, drop_last=False)
         elem_num = len(train_data_loader)
@@ -102,10 +102,10 @@ class Trainer(object):
             itera, data = train_enumerator.__next__()
             pre_change_imgs, post_change_imgs, labels_loc, labels_clf, _ = data
 
-            pre_change_imgs = pre_change_imgs.to('mps')
-            post_change_imgs = post_change_imgs.to('mps')
-            labels_loc = labels_loc.to('mps').long()
-            labels_clf = labels_clf.to('mps').long()
+            pre_change_imgs = pre_change_imgs.to('cuda')
+            post_change_imgs = post_change_imgs.to('cuda')
+            labels_loc = labels_loc.to('cuda').long()
+            labels_clf = labels_clf.to('cuda').long()
 
             valid_labels_clf = (labels_clf != 255).any()
             if not valid_labels_clf:
@@ -133,7 +133,7 @@ class Trainer(object):
 
             if (itera + 1) % 10 == 0:
                 print(f'iter is {itera + 1}, classification loss is {final_loss.item()}')
-                if (itera + 1) % 500 == 0:
+                if (itera + 1) % 100 == 0:
                     self.deep_model.eval()
                     loc_f1_score_val, harmonic_mean_f1_val, final_OA_val, mIoU_val, IoU_of_each_class_val = self.validation()
                     loc_f1_score_test, harmonic_mean_f1_test, final_OA_test, mIoU_test, IoU_of_each_class_test = self.test()
@@ -167,16 +167,16 @@ class Trainer(object):
         self.evaluator_clf.reset()
         val_dataset = MultimodalDamageAssessmentDatset(self.args.val_dataset_path, self.args.val_data_name_list, 1024, None, 'test')
         val_data_loader = DataLoader(val_dataset, batch_size=self.args.eval_batch_size, num_workers=1, drop_last=False)
-        torch.mps.empty_cache()
+        torch.cuda.empty_cache()
 
         with torch.no_grad():
             for _, data in enumerate(val_data_loader):
                 pre_change_imgs, post_change_imgs, labels_loc, labels_clf, _ = data
 
-                pre_change_imgs = pre_change_imgs.to('mps')
-                post_change_imgs = post_change_imgs.to('mps')
-                labels_loc = labels_loc.to('mps').long()
-                labels_clf = labels_clf.to('mps').long()
+                pre_change_imgs = pre_change_imgs.to('cuda')
+                post_change_imgs = post_change_imgs.to('cuda')
+                labels_loc = labels_loc.to('cuda').long()
+                labels_clf = labels_clf.to('cuda').long()
 
                 input_data = torch.cat([pre_change_imgs, post_change_imgs], dim=1) # if you use UNet
                 output_clf = self.deep_model(input_data)  # if you use UNet
@@ -211,16 +211,16 @@ class Trainer(object):
         self.evaluator_clf.reset()
         test_dataset = MultimodalDamageAssessmentDatset(self.args.test_dataset_path, self.args.test_data_name_list, 1024, None, 'test')
         test_data_loader = DataLoader(test_dataset, batch_size=self.args.eval_batch_size, num_workers=1, drop_last=False)
-        torch.mps.empty_cache()
+        torch.cuda.empty_cache()
 
         with torch.no_grad():
             for _, data in enumerate(test_data_loader):
                 pre_change_imgs, post_change_imgs, labels_loc, labels_clf, _ = data
 
-                pre_change_imgs = pre_change_imgs.to('mps')
-                post_change_imgs = post_change_imgs.to('mps')
-                labels_loc = labels_loc.to('mps').long()
-                labels_clf = labels_clf.to('mps').long()
+                pre_change_imgs = pre_change_imgs.to('cuda')
+                post_change_imgs = post_change_imgs.to('cuda')
+                labels_loc = labels_loc.to('cuda').long()
+                labels_clf = labels_clf.to('cuda').long()
 
                 input_data = torch.cat([pre_change_imgs, post_change_imgs], dim=1) # if you use UNet
                 output_clf = self.deep_model(input_data)  # if you use UNet
@@ -270,7 +270,7 @@ def main():
     parser.add_argument('--test_data_name_list', type=list)
 
     parser.add_argument('--start_iter', type=int, default=0)
-    parser.add_argument('--mps', type=bool, default=True)
+    parser.add_argument('--cuda', type=bool, default=True)
     parser.add_argument('--max_iters', type=int, default=240000)
     parser.add_argument('--model_type', type=str)
     parser.add_argument('--model_param_path', type=str, default='/home/songjian/project/BRIGHT/dfc25_benchmark/saved_weights')

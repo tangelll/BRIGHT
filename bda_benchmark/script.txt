@@ -1,0 +1,1 @@
+python script/standard_ML/infer_UNet.py --model_path D:DatasetBrightsaved_weightsBRIGHTUNet_20261003_002456/best_model.pth --test_dataset_path D:DatasetBrightdfc25_track2_test --test_data_list_path D:DatasetBrightdfc25_track2_testfiles.txt --output_dir D:BRIGHTbda_benchmarkinference_output
